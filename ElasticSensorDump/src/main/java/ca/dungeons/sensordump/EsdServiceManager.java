@@ -8,6 +8,7 @@ import android.net.ConnectivityManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -32,6 +33,8 @@ public class EsdServiceManager extends Service {
 
         /** */
     private EsdServiceReceiver esdMessageReceiver;
+
+    private DatabaseHelper dbHelper;
 
         /** True if we are currently reading sensor data. */
     boolean logging = false;
@@ -116,7 +119,7 @@ public class EsdServiceManager extends Service {
     @Override
     public void onCreate () {
         sharedPrefs = PreferenceManager.getDefaultSharedPreferences( this.getBaseContext() );
-
+        dbHelper = new DatabaseHelper( this );
         esdMessageReceiver = new EsdServiceReceiver( this );
         registerReceiver( esdMessageReceiver, esdMessageReceiver.messageFilter );
     }
@@ -138,7 +141,7 @@ public class EsdServiceManager extends Service {
             connectionManager = (ConnectivityManager) getSystemService( CONNECTIVITY_SERVICE );
 
         /* Use SensorRunnable class to start the logging process. */
-            SensorRunnable sensorRunnable  = new SensorRunnable( this, sharedPrefs );
+            SensorRunnable sensorRunnable  = new SensorRunnable( this, sharedPrefs, dbHelper, this );
             workingThreadPool.submit( sensorRunnable );
 
         /* Create an instance of Uploads, and submit to the thread pool to begin execution. */
@@ -175,6 +178,23 @@ public class EsdServiceManager extends Service {
 
             sendBroadcast( outIntent );
         }
+    }
+
+    public void sensorSuccess(boolean sensorReading,boolean gpsReading,boolean audioReading){
+      if( sensorReading )
+        sensorReadings++;
+      if ( gpsReading )
+        gpsReadings++;
+      if ( audioReading )
+        audioReadings++;
+    }
+
+    public void uploadSuccess( boolean result ){
+      if(result){
+        documentsIndexed++;
+      }else{
+        uploadErrors++;
+      }
     }
 
 

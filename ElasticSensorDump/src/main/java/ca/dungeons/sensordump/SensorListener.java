@@ -25,7 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Created by Gurtok on 8/14/2017. */
-class SensorListener extends Thread implements android.hardware.SensorEventListener {
+class SensorListener implements android.hardware.SensorEventListener {
 
   /** Use this to identify this classes log messages. */
   private final String logTag = "SensorListener";
@@ -100,21 +100,6 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   }
 
-  @Override
-  public synchronized void start() {
-    super.start();
-  }
-
-  @Override
-  public void run() {
-    super.run();
-  }
-
-  @Override
-  public void interrupt() {
-    super.interrupt();
-  }
-
   /**
    * This is the main recording loop. One reading per sensorMessageHandler per loop.
    * Update timestamp in sensorMessageHandler data structure.
@@ -127,7 +112,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   @Override
   public final void onSensorChanged(SensorEvent event) {
     // Check if we should be shutting down sensor recording.
-    if ( isInterrupted() ) {
+    if ( !sensorLogging ) {
       unregisterSensorListeners();
       return;
     }
@@ -220,9 +205,9 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
     if (sensorsRegistered) {
       passedContext.unregisterReceiver(this.batteryReceiver);
       mSensorManager.unregisterListener(this);
+      setGpsPower(false);
+      setAudioPower(false);
     }
-    setGpsPower(false);
-    setAudioPower(false);
     sensorsRegistered = false;
   }
 
@@ -258,6 +243,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   /** Control method to enable/disable gps recording. */
   void setGpsPower(boolean power) {
     Log.e( logTag, "GPS power: " + power );
+
     if (power && sensorLogging && !gpsRegistered) {
       registerGpsSensors();
     }
@@ -270,33 +256,36 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   /** Register gps sensors to enable recording. */
   private void registerGpsSensors() {
+    if( !gpsRegistered ){
+      boolean gpsPermissionFine = sharedPrefs.getBoolean("gps_permission_FINE", false);
+      boolean gpsPermissionCoarse = sharedPrefs.getBoolean("gps_permission_COARSE", false);
 
-    boolean gpsPermissionFine = sharedPrefs.getBoolean("gps_permission_FINE", false);
-    boolean gpsPermissionCoarse = sharedPrefs.getBoolean("gps_permission_COARSE", false);
-
-    try {
-      if (gpsPermissionFine || gpsPermissionCoarse) {
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, sensorRefreshTime - 10, 0, gpsLogger);
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, sensorRefreshTime - 10, 0, gpsLogger);
-        Log.i(logTag, "GPS listeners registered.");
-        gpsRegistered = true;
-      } else {
-        Log.e(logTag + "regGPS", "Register gps method, gpsPermissionFine == false");
+      try {
+        if (gpsPermissionFine || gpsPermissionCoarse) {
+          locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, sensorRefreshTime - 10, 0, gpsLogger);
+          locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, sensorRefreshTime - 10, 0, gpsLogger);
+          Log.i(logTag, "GPS listeners registered.");
+          gpsRegistered = true;
+        } else {
+          Log.e(logTag + "regGPS", "Register gps method, gpsPermissionFine == false");
+        }
+      } catch (SecurityException secEx) {
+        Log.e(logTag, "Failure turning gps on/off. Cause: " + secEx.getMessage());
+        secEx.printStackTrace();
+      } catch (RuntimeException runTimeEx) {
+        Log.e(logTag, "StackTrace: ");
+        runTimeEx.printStackTrace();
       }
-    } catch (SecurityException secEx) {
-      Log.e(logTag, "Failure turning gps on/off. Cause: " + secEx.getMessage());
-      secEx.printStackTrace();
-    } catch (RuntimeException runTimeEx) {
-      Log.e(logTag, "StackTrace: ");
-      runTimeEx.printStackTrace();
     }
   }
 
   /** Unregister gps sensors. */
   private void unRegisterGpsSensors() {
-    locationManager.removeUpdates(gpsLogger);
-    gpsRegistered = false;
-    Log.i(logTag, "GPS unregistered.");
+    if( gpsRegistered ){
+      locationManager.removeUpdates(gpsLogger);
+      gpsRegistered = false;
+      Log.i(logTag, "GPS unregistered.");
+    }
   }
 
 //AUDIO
@@ -313,17 +302,21 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   /** Register audio recording thread. */
   private void registerAudioSensors() {
-    audioRunnable = new AudioRunnable();
-    threadPool.submit(audioRunnable);
-    audioRegistered = true;
-    Log.i(logTag, "Registered audio sensors.");
+    if( !audioRegistered ){
+      audioRunnable = new AudioRunnable();
+      threadPool.submit(audioRunnable);
+      audioRegistered = true;
+      Log.i(logTag, "Registered audio sensors.");
+    }
   }
 
   /** Stop audio recording thread. */
   private void unregisterAudioSensors() {
-    audioRunnable.setStopAudioThread();
-    audioRegistered = false;
-    Log.i(logTag, "Unregistered audio sensors.");
+    if( audioRegistered ){
+      audioRunnable.setStopAudioThread();
+      audioRegistered = false;
+      Log.i(logTag, "Unregistered audio sensors.");
+    }
   }
 
 

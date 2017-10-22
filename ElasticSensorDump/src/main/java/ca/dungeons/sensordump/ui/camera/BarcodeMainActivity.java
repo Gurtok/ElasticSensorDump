@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package ca.dungeons.sensordump;
+package ca.dungeons.sensordump.ui.camera;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -26,6 +26,9 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.vision.barcode.Barcode;
+
+import ca.dungeons.sensordump.R;
+import ca.dungeons.sensordump.ui.camera.BarcodeCaptureActivity;
 
 /**
  * Main activity demonstrating how to pass extra parameters to an activity that

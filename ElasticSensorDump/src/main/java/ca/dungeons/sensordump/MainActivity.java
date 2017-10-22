@@ -108,7 +108,7 @@ public class MainActivity extends Activity{
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate( savedInstanceState);
-        setContentView( R.layout.activity_main);
+        setContentView(R.layout.activity_main);
         sharedPrefs = this.getPreferences(MODE_PRIVATE);
         buildButtonLogic();
         createBroadcastReceiver();
@@ -148,8 +148,8 @@ public class MainActivity extends Activity{
             getDatabasePopulation();
         }
 
-        TextView sensorTV = (TextView) findViewById(R.id.sensor_tv);
-        TextView documentsTV = (TextView) findViewById(R.id.documents_tv);
+        TextView sensorTV = (TextView) findViewById( R.id.sensor_tv );
+        TextView documentsTV = (TextView) findViewById( R.id.documents_tv );
         TextView gpsTV = (TextView) findViewById(R.id.gps_TV);
         TextView errorsTV = (TextView) findViewById(R.id.errors_TV);
         TextView audioTV = (TextView) findViewById( R.id.audioCount );

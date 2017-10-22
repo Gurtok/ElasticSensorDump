@@ -34,7 +34,7 @@
             android:exported="false"
             android:label="ESD Service Manager"></service>
 
-        <activity android:name=".BarcodeCaptureActivity"></activity>
+        <activity android:name=".ui.camera.BarcodeCaptureActivity"></activity>
         <activity android:name=".QR_Activity"></activity>
     </application>
 

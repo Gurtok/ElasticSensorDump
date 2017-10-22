@@ -19,7 +19,7 @@ public class EsdServiceReceiver extends BroadcastReceiver {
     private final EsdServiceManager esdServiceManager;
 
         /** Filter for the broadcast receiver. */
-        final IntentFilter messageFilter = new IntentFilter();
+    final IntentFilter messageFilter = new IntentFilter();
 
 /* Sensor toggles. */
         /** Intent action address: Boolean - If we are recording PHONE sensor data. */
@@ -35,18 +35,6 @@ public class EsdServiceReceiver extends BroadcastReceiver {
         /**  Intent action address: integer - Rate change from user. */
     public final static String INTERVAL = "esd.intent.action.message.INTERVAL";
 
-/* Update UI. */
-        /** Intent action address: String - Call for the service to update the UI thread data records. */
-    private final static String UPDATE_UI_display = "esd.intent.action.message.UPDATE_UI_display";
-
-/* Update counts. */
-        /** Intent action address: Boolean - Indicate if the current index attempt was successful. */
-    public final static String INDEX_SUCCESS = "esd.intent.action.message.Uploads.INDEX_SUCCESS";
-
-/* Sensor readings. */
-        /** Intent action address: Boolean - Used by SensorListener to update EsdServiceManagers data. */
-    public final static String SENSOR_SUCCESS = "esd.intent.action.message.SensorListener.SENSOR_SUCCESS";
-
         /** Default constructor:
         * This class is instantiated by the service manager, thus it passes itself to this class. */
     public EsdServiceReceiver( EsdServiceManager passedManagerObj ) {
@@ -60,11 +48,6 @@ public class EsdServiceReceiver extends BroadcastReceiver {
         messageFilter.addAction( GPS_MESSAGE );
         messageFilter.addAction( AUDIO_MESSAGE );
         messageFilter.addAction( INTERVAL );
-
-        messageFilter.addAction(UPDATE_UI_display);
-
-        messageFilter.addAction( INDEX_SUCCESS );
-        messageFilter.addAction( SENSOR_SUCCESS );
     }
 
         /** Main point of contact for the service manager.
@@ -103,31 +86,6 @@ public class EsdServiceReceiver extends BroadcastReceiver {
                     messageIntent = new Intent(SensorRunnable.INTERVAL);
                     messageIntent.putExtra("sensorInterval", esdServiceManager.sensorRefreshRate);
                     esdServiceManager.sendBroadcast(messageIntent);
-                    break;
-
-                case UPDATE_UI_display:
-                    esdServiceManager.updateUiData();
-                    break;
-
-                case INDEX_SUCCESS:
-                    if( intent.getBooleanExtra(INDEX_SUCCESS, true) ){
-                        esdServiceManager.documentsIndexed++;
-                    }else{
-                        esdServiceManager.uploadErrors++;
-                    }
-                    esdServiceManager.updateUiData();
-                    break;
-
-                case SENSOR_SUCCESS:
-                    if( esdServiceManager.logging && intent.getBooleanExtra( "sensorReading", false) )
-                        esdServiceManager.sensorReadings++;
-
-                    if ( esdServiceManager.gpsLogging && intent.getBooleanExtra( "gpsReading", false) )
-                        esdServiceManager.gpsReadings++;
-
-                    if ( esdServiceManager.audioLogging && intent.getBooleanExtra( "audioReading", false) )
-                        esdServiceManager.audioReadings++;
-                    esdServiceManager.updateUiData();
                     break;
 
                 default:

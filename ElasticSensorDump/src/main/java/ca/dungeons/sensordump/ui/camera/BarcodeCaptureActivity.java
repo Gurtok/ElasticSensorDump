@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ca.dungeons.sensordump;
+package ca.dungeons.sensordump.ui.camera;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -47,6 +47,9 @@ import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import java.io.IOException;
+
+import ca.dungeons.sensordump.ui.camera.BarcodeTrackerFactory;
+import ca.dungeons.sensordump.R;
 
 
 /**

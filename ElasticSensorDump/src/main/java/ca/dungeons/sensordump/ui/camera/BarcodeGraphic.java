@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ca.dungeons.sensordump;
+package ca.dungeons.sensordump.ui.camera;
 
 import android.graphics.Canvas;
 import android.graphics.Color;

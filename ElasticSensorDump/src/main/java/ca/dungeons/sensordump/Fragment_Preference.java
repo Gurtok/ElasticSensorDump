@@ -11,6 +11,8 @@ import android.util.Log;
 
 import com.google.android.gms.common.api.CommonStatusCodes;
 
+import ca.dungeons.sensordump.ui.camera.BarcodeMainActivity;
+
 public class Fragment_Preference extends PreferenceFragment {
 
     private static final String TAG = "Preference_Frag";

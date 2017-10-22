@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ca.dungeons.sensordump;
+package ca.dungeons.sensordump.ui.camera;
 
 import android.content.Context;
 import android.support.annotation.UiThread;
@@ -21,6 +21,9 @@ import android.support.annotation.UiThread;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.barcode.Barcode;
+
+import ca.dungeons.sensordump.ui.camera.GraphicOverlay;
+import ca.dungeons.sensordump.ui.camera.BarcodeGraphic;
 
 /**
  * Generic tracker which is used for tracking or reading a barcode (and can really be used for

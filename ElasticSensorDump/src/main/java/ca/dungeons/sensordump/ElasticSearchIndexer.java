@@ -77,10 +77,6 @@ class ElasticSearchIndexer extends Thread{
         messageIntent = new Intent( Uploads_Receiver.INDEX_SUCCESS );
         messageIntent.putExtra("INDEX_SUCCESS", result );
         passedContext.sendBroadcast( messageIntent );
-
-        messageIntent = new Intent( EsdServiceReceiver.INDEX_SUCCESS );
-        messageIntent.putExtra("INDEX_SUCCESS", result );
-        passedContext.sendBroadcast( messageIntent );
     }
 
 
