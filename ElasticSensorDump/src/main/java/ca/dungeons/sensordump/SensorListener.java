@@ -25,7 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Created by Gurtok on 8/14/2017. */
-class SensorListener implements android.hardware.SensorEventListener {
+class SensorListener extends Thread implements android.hardware.SensorEventListener {
 
   /** Use this to identify this classes log messages. */
   private final String logTag = "SensorListener";
@@ -49,7 +49,7 @@ class SensorListener implements android.hardware.SensorEventListener {
   private final SimpleDateFormat logDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ", Locale.US);
 
   /** Timers, the schema is defined else where. */
-  private final long startTime;
+  private long startTime;
   /** Used to get access to GPS. */
   private final LocationManager locationManager;
 
@@ -86,6 +86,7 @@ class SensorListener implements android.hardware.SensorEventListener {
   /** Control variable to make sure we only create one audio logger. */
   private boolean audioRegistered;
 
+
   /** Default Constructor. */
   SensorListener(Context context, SharedPreferences sharedPreferences, DatabaseHelper dbHelper, EsdServiceManager serviceManger) {
     sharedPrefs = sharedPreferences;
@@ -95,9 +96,20 @@ class SensorListener implements android.hardware.SensorEventListener {
     locationManager = (LocationManager) passedContext.getSystemService(Context.LOCATION_SERVICE);
     gpsLogger = new GPSLogger();
     audioRunnable = new AudioRunnable();
-    startTime = lastUpdate = System.currentTimeMillis();
-    parseSensorArray();
+  }
 
+  void stopThread(){
+    this.interrupt();
+  }
+
+  @Override
+  public synchronized void start() {
+    super.start();
+  }
+
+  @Override
+  public void run() {
+    super.run();
   }
 
   /**
@@ -111,13 +123,7 @@ class SensorListener implements android.hardware.SensorEventListener {
    */
   @Override
   public final void onSensorChanged(SensorEvent event) {
-    // Check if we should be shutting down sensor recording.
-    if ( !sensorLogging ) {
-      unregisterSensorListeners();
-      return;
-    }
-
-    if (System.currentTimeMillis() > lastUpdate + sensorRefreshTime && sensorsRegistered) {
+    if (!isInterrupted() && System.currentTimeMillis() > lastUpdate + sensorRefreshTime && sensorsRegistered) {
       // ^^ Make sure we generate docs at an adjustable rate.
       // 250ms is the default setting.
 
@@ -170,7 +176,8 @@ class SensorListener implements android.hardware.SensorEventListener {
 // Phone Sensors
 
   /** Use this method to control if we should be recording sensor data or not. */
-  void setSensorLogging(boolean power) {
+  void setSensorPower(boolean power) {
+    sensorLogging = true;
     if (power && !sensorsRegistered) {
       registerSensorListeners();
     }
@@ -189,7 +196,8 @@ class SensorListener implements android.hardware.SensorEventListener {
 
   /** Method to register listeners upon logging. */
   private void registerSensorListeners() {
-
+    startTime = lastUpdate = System.currentTimeMillis();
+    parseSensorArray();
     // Register each sensorMessageHandler to this activity.
     for (int cursorInt : usableSensorList) {
       mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(cursorInt),
@@ -242,7 +250,7 @@ class SensorListener implements android.hardware.SensorEventListener {
 
   /** Control method to enable/disable gps recording. */
   void setGpsPower(boolean power) {
-    Log.e( logTag, "GPS power: " + power );
+    Log.e( logTag, "Set gps power: " + power );
 
     if (power && sensorLogging && !gpsRegistered) {
       registerGpsSensors();
@@ -292,6 +300,7 @@ class SensorListener implements android.hardware.SensorEventListener {
 
   /** Set audio recording on/off. */
   void setAudioPower(boolean power) {
+    Log.e( logTag, "Set audio power: " + power );
     if (power && sensorLogging && !audioRegistered) {
       registerAudioSensors();
     }
