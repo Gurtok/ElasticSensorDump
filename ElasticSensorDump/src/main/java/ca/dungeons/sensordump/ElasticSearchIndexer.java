@@ -1,7 +1,20 @@
+/*
+ * Copyright (C) The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ca.dungeons.sensordump;
 
-import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -15,7 +28,6 @@ import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 
-
 /**
  * Elastic Search Indexer.
  * Use this thread to upload data to the elastic server.
@@ -24,7 +36,6 @@ class ElasticSearchIndexer extends Thread {
 
   /** Used to identify which class is writing to logCat. */
   private final String logTag = "eSearchIndexer";
-
   /** Elastic username. */
   String esUsername = "";
   /** Elastic password. */
@@ -34,7 +45,7 @@ class ElasticSearchIndexer extends Thread {
   /** The URL we use to create an index and PUT a mapping schema on it. */
   URL mapUrl;
   /** A variable to hold the JSON string to be uploaded. */
-  String uploadString = "";
+  private String uploadString = "";
   private Uploads uploads;
   /** Used to establish outside connection. */
   private HttpURLConnection httpCon;
@@ -51,18 +62,20 @@ class ElasticSearchIndexer extends Thread {
   /** This run method is executed upon each index start. */
   @Override
   public void run() {
-    if (!alreadySentMapping) {
+    if (!alreadySentMapping)
       createMapping();
-    }
-
-    if (!uploadString.equals("") && alreadySentMapping) {
+    if (!uploadString.equals("") && alreadySentMapping)
       index(uploadString);
-    }
   }
 
   /** Send messages to Upload thread and ESD service thread to indicate result of index. */
   private void indexSuccess(boolean result) {
     this.uploads.uploadSuccess = result;
+  }
+
+  /** Set the next string to be uploaded. */
+  void setNextString(String uploadString) {
+    this.uploadString = uploadString;
   }
 
 
@@ -200,7 +213,7 @@ class ElasticSearchIndexer extends Thread {
         //Log.e( logTag, "Success with response code: " + responseMessage + responseCode );
 
         if (responseCode == 400) {
-          Log.e(logTag, "Index already exists. Skipping map.");
+          Log.e(logTag, "Index already exists. Skipping map. " + responseMessage);
         }
 
         httpCon.disconnect();
@@ -219,7 +232,6 @@ class ElasticSearchIndexer extends Thread {
       );
 
     }
-
     httpCon.disconnect();
     return false;
   }

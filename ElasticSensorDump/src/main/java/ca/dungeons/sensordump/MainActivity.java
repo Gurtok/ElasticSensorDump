@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ca.dungeons.sensordump;
 
 import android.Manifest;
@@ -22,7 +37,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,28 +49,27 @@ import ca.dungeons.sensordump.EsdServiceManager.ServiceBinder;
  * Record the sensor data and upload it to your elastic search server.
  */
 public class MainActivity extends Activity {
-  /** */
+  /** Identify logcat messages. */
   private final String logTag = "MainActivity";
   /** Do NOT record more than once every 50 milliseconds. Default value is 250ms. */
-  private final int MIN_SENSOR_REFRESH = 50;
+  private final int MIN_SENSOR_REFRESH = 100;
   /** Global SharedPreferences object. */
   private SharedPreferences sharedPrefs;
   /** Persistent access to the apps database to avoid creating multiple db objects. */
   private DatabaseHelper databaseHelper;
-
+  /** The backend service that runs data collection and uploading. */
   private EsdServiceManager serviceManager;
-
+  /** If the UI thread is active, it should be bound to the service manager. */
   private boolean isBound = false;
-
   /** Refresh time in milliseconds. Default = 250ms. */
   private int sensorRefreshTime = 250;
-
+  /** This scheduled thread will run the UI screen updates. */
   private final ScheduledExecutorService updateTimer = Executors.newSingleThreadScheduledExecutor();
-
   /** Number of sensor readings this session */
   private int sensorReadings, documentsIndexed, gpsReadings, uploadErrors, audioReadings = 0;
+  /** The current database population. Probably does not need to be a long, research how sql deals with IDs. */
   private long databasePopulation = 0L;
-
+  /** The runnable used to periodically update the UI with data counts. */
   private Runnable updateRunnable = new Runnable() {
     @Override
     public void run() {
@@ -85,9 +98,11 @@ public class MainActivity extends Activity {
   /** Method to start the service manager if we have not already. */
   private void startServiceManager() {
     Intent startIntent = new Intent(this, EsdServiceManager.class);
+    startService( startIntent );
     bindService( startIntent, serviceManagerConnection, Context.BIND_AUTO_CREATE );
   }
 
+  /** The UI connection to the service thread. */
   private ServiceConnection serviceManagerConnection = new ServiceConnection() {
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
@@ -101,6 +116,7 @@ public class MainActivity extends Activity {
     }
   };
 
+  /** Call service manager to receive a bundle of updated data counts. */
   void getScreenUpdates(){
     if( isBound ){
       Bundle dataBundle = serviceManager.updateUiData();
@@ -125,10 +141,7 @@ public class MainActivity extends Activity {
     sharedPref_Editor.apply();
   }
 
-  /**
-   * Update the display with readings/written/errors.
-   * Need to update UI based on the passed data intent.
-   */
+  /** Call for updates, then update the display. */
   void updateScreen() {
     getScreenUpdates();
     TextView sensorTV = (TextView) findViewById(R.id.sensor_tv);
@@ -159,7 +172,7 @@ public class MainActivity extends Activity {
     startButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
       @Override
       public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-        Log.e(logTag, "Are we bound to the service: " + isBound);
+        //Log.e(logTag, "Are we bound to the service: " + isBound);
         if( isBound ){
           if (isChecked) {
             Log.e(logTag, "Start button ON !");
@@ -227,7 +240,9 @@ public class MainActivity extends Activity {
         } else {
           sensorRefreshTime = progress * 10;
         }
-        serviceManager.setSensorRefreshTime( sensorRefreshTime );
+        if( serviceManager != null ){
+          serviceManager.setSensorRefreshTime( sensorRefreshTime );
+        }
         tvSeekBarText.setText(getString(R.string.Collection_Interval) + " " + sensorRefreshTime + getString(R.string.milliseconds));
       }
 
@@ -245,7 +260,6 @@ public class MainActivity extends Activity {
   /**
    * Prompt user for GPS access.
    * Write this result to shared preferences.
-   *
    * @return True if we asked for permission and it was granted.
    */
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -279,13 +293,11 @@ public class MainActivity extends Activity {
   /**
    * Prompt user for MICROPHONE access.
    * Write this result to shared preferences.
-   *
    * @return True if we asked for permission and it was granted.
    */
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   private boolean audioPermission() {
     boolean audioPermission = sharedPrefs.getBoolean("audio_permission", false);
-
     if (!audioPermission) {
       String[] permissions = {Manifest.permission.RECORD_AUDIO};
       ActivityCompat.requestPermissions(this, permissions, 1);
@@ -314,12 +326,13 @@ public class MainActivity extends Activity {
     super.onResume();
     startServiceManager();
     databaseHelper = new DatabaseHelper(this);
-    updateTimer.scheduleAtFixedRate(updateRunnable, 0, 1, TimeUnit.SECONDS );
+    updateTimer.scheduleAtFixedRate(updateRunnable, 1, 1, TimeUnit.SECONDS );
   }
 
   /** If the user exits the application. */
   @Override
   protected void onDestroy() {
+    unbindService( serviceManagerConnection );
     serviceManager.stopServiceThread();
     updateTimer.shutdown();
     databaseHelper.close();

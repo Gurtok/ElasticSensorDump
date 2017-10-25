@@ -48,7 +48,6 @@ import com.google.android.gms.vision.barcode.BarcodeDetector;
 
 import java.io.IOException;
 
-import ca.dungeons.sensordump.ui.camera.BarcodeTrackerFactory;
 import ca.dungeons.sensordump.R;
 
 

@@ -27,15 +27,20 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:label="Settings"></activity>
+            android:label="Settings">
+        </activity>
 
         <service
             android:name=".EsdServiceManager"
             android:exported="false"
-            android:label="ESD Service Manager"></service>
+            android:label="ESD Service Manager">
+        </service>
 
-        <activity android:name=".ui.camera.BarcodeCaptureActivity"></activity>
-        <activity android:name=".QR_Activity"></activity>
+        <activity android:name=".ui.camera.BarcodeCaptureActivity">
+        </activity>
+
+        <activity android:name=".ui.camera.BarcodeMainActivity">
+        </activity>
     </application>
 
 </manifest>

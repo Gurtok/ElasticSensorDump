@@ -1,9 +1,21 @@
+/*
+ * Copyright (C) The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ca.dungeons.sensordump;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.util.Log;
 
@@ -32,6 +44,9 @@ class Uploads implements Runnable {
   boolean uploadSuccess = false;
   /** Control variable to indicate if we should stop uploading to elastic. */
   private static boolean stopUploadThread = false;
+
+  private String esIndex;
+  private String esType;
   /** ID for logcat. */
   private final String logTag = "Uploads";
   /** Used to gain access to the application database. */
@@ -47,80 +62,46 @@ class Uploads implements Runnable {
   /** Used to keep track of how many POST requests we are allowed to do each second. */
   private Long globalUploadTimer = System.currentTimeMillis();
 
-  /** Intent action address: Boolean - Control method to shut down upload thread. */
-  final static String STOP_UPLOAD_THREAD = "esd.intent.action.message.Uploads_Receiver.STOP_UPLOAD_THREAD";
-
-  /** Broadcast receiver initialization. */
-  private final BroadcastReceiver uploadReceiver = new BroadcastReceiver() {
-
-    @Override
-    public void onReceive(Context context, Intent intent) {
-      switch( intent.getAction() ){
-        case STOP_UPLOAD_THREAD :
-          Log.e( logTag, "Upload thread interrupted." );
-          stopUploading();
-          break;
-        default:
-          Log.e(logTag , "Received bad information from ACTION intent." );
-          break;
-      }
-    }
-  };
-
   /** Default Constructor using the application context. */
   Uploads(Context context, SharedPreferences passedPreferences, EsdServiceManager serviceManager) {
     serviceContext = context;
     sharedPreferences = passedPreferences;
     this.serviceManager = serviceManager;
     esIndexer = new ElasticSearchIndexer( this );
-    registerMessageReceiver();
+
   }
 
   /** Main class entry. The data we need has already been updated. So just go nuts. */
   @Override
   public void run() {
+    Log.e(logTag, "Started upload thread.");
+    working = true;
     startUploading();
+    working = false;
+    Log.e(logTag, "Stopped upload thread.");
+
   }
 
   boolean isWorking(){
     return working;
   }
 
-  /** */
-  private void registerMessageReceiver(){
-    IntentFilter filter = new IntentFilter();
-    filter.addAction( STOP_UPLOAD_THREAD );
-    // Register this broadcast messageReceiver.
-    serviceContext.registerReceiver( uploadReceiver, filter );
-  }
-
-  /** */
-  private void unRegisterUploadReceiver(){
-    serviceContext.unregisterReceiver( uploadReceiver );
-  }
-
   /** Control variable to halt the whole thread. */
-  private void stopUploading() {
+  void stopUploading() {
     stopUploadThread = true;
-    unRegisterUploadReceiver();
   }
 
   /** Main work of upload runnable is accomplished here. */
   private void startUploading() {
 
-    Log.e(logTag, "Started upload thread.");
 
-    working = true;
     stopUploadThread = false;
 
     int timeoutCount = 0;
-
     DatabaseHelper dbHelper = new DatabaseHelper(serviceContext);
-
         /* If we cannot establish a connection with the elastic server. */
     if (!checkForElasticHost()) {
       // This thread is not working.
-      working = false;
       // We should stop the service if this is true.
       stopUploadThread = true;
       Log.e(logTag, "No elastic host.");
@@ -129,46 +110,43 @@ class Uploads implements Runnable {
 
         /* Loop to keep uploading. */
     while (!stopUploadThread) {
-
         /* A limit of 5 outs per second */
-      if (System.currentTimeMillis() > globalUploadTimer + 200) {
+      if (System.currentTimeMillis() > globalUploadTimer + 200 ) {
+        String nextString = dbHelper.getBulkString(esIndex, esType);
 
-        updateIndexerUrl();
-
-        uploadSuccess = false;
-        String nextString = dbHelper.getNextCursor();
-
-        // If nextString has data.
-        if (nextString != null) {
-          esIndexer.uploadString = nextString;
+        if( nextString != null ){
+          updateIndexerUrl();
+          // If setNextString has data.
+          esIndexer.setNextString( nextString );
           try {
+            uploadSuccess = false;
             // Start the indexing thread, and join to wait for it to finish.
             esIndexer.start();
             esIndexer.join();
           } catch (InterruptedException interEx) {
             Log.e(logTag, "Failed to join ESI thread, possibly not running.");
           }
+
           if (uploadSuccess) {
             globalUploadTimer = System.currentTimeMillis();
             timeoutCount = 0;
-            serviceManager.uploadSuccess( true );
-            dbHelper.deleteJson();
+            serviceManager.uploadSuccess( true, dbHelper.getBulkCounts() );
+            dbHelper.deleteUploadedIndices();
             //Log.e(logTag, "Successful index.");
           } else {
             timeoutCount++;
-            serviceManager.uploadSuccess( false );
+            serviceManager.uploadSuccess( false, 0 );
           }
-        } else {
-          timeoutCount++;
+        }else{
+          stopUploadThread = true;
         }
         if (timeoutCount > 9) {
           Log.i(logTag, "Failed to index 10 times, shutting down.");
           stopUploading();
         }
-
       }
     }
-    working = false;
+    dbHelper.close();
   }
 
   /**
@@ -178,7 +156,6 @@ class Uploads implements Runnable {
   private void updateIndexerUrl() {
 
     // Security variables.
-    boolean esSSL = sharedPreferences.getBoolean("ssl", false);
     String esUsername = sharedPreferences.getString("user", "");
     String esPassword = sharedPreferences.getString("pass", "");
 
@@ -190,8 +167,8 @@ class Uploads implements Runnable {
 
     String esHost = sharedPreferences.getString("host", "localhost");
     String esPort = sharedPreferences.getString("port", "9200");
-    String esIndex = sharedPreferences.getString("index", "test_index");
-    String esType = sharedPreferences.getString("type", "esd");
+    esIndex = sharedPreferences.getString("index", "test_index");
+    esType = sharedPreferences.getString("type", "esd");
 
     // Tag the current date stamp on the index name if set in preferences
     // Thanks GlenRSmith for this idea
@@ -202,17 +179,9 @@ class Uploads implements Runnable {
       esIndex = esIndex + "-" + dateString;
     }
 
-    // Default currently is non-secure. Will change that asap.
-    //TODO: Sanitize the input
-    String httpString = "http://";
-    if (esSSL) {
-      httpString = "https://";
-    }
-
-    String mappingURL = String.format("%s%s:%s/%s", httpString, esHost, esPort, esIndex);
-
+    String mappingURL = String.format("%s:%s/%s", esHost, esPort, esIndex);
     // Note the different URLs. Regular post ends with type. Mapping ends with index ID.
-    String postingURL = String.format("%s%s:%s/%s/%s", httpString, esHost, esPort, esIndex, esType);
+    String postingURL = String.format("%s:%s/%s", esHost, esPort, "_bulk");
 
     try {
       esIndexer.mapUrl = new URL(mappingURL);
@@ -222,7 +191,6 @@ class Uploads implements Runnable {
       esIndexer.mapUrl = null;
       esIndexer.postUrl = null;
     }
-
   }
 
   /** Helper method to determine if we currently have access to an elastic server to upload to. */
@@ -246,7 +214,7 @@ class Uploads implements Runnable {
       final String esPassword = sharedPreferences.getString("pass", "");
 
       try {
-        esUrl = new URL(String.format("https://%s:%s/", esHost, esPort));
+        esUrl = new URL(String.format("%s:%s/", esHost, esPort));
         httpsConnection = (HttpsURLConnection) esUrl.openConnection();
 
         // Send authentication if required
@@ -268,14 +236,14 @@ class Uploads implements Runnable {
           httpsConnection.disconnect();
         }
       } catch (IOException | NullPointerException ex) {
-        Log.e(logTag + " chkHost.", "Failure to open connection cause." + ex.getMessage() + " " + responseCode);
+        Log.e(logTag + " chkHost", "Failure to open connection cause. " + ex.getMessage() + " " + responseCode);
         //ex.printStackTrace();
       }
     } else { // Else NON-secured connection.
 
       try {
         //Log.e("Uploads-CheckHost", esHostUrlString); // DIAGNOSTICS
-        esUrl = new URL(String.format("http://%s:%s/", esHost, esPort));
+        esUrl = new URL(String.format("%s:%s/", esHost, esPort));
         httpConnection = (HttpURLConnection) esUrl.openConnection();
         httpConnection.setConnectTimeout(2000);
         httpConnection.setReadTimeout(2000);
@@ -287,7 +255,7 @@ class Uploads implements Runnable {
           httpConnection.disconnect();
         }
       } catch (IOException ex) {
-        Log.e(logTag + " chkHost.", "Failure to open connection cause." + ex.getMessage() + " " + responseCode);
+        Log.e(logTag + " chkHost.", "Failure to open connection cause. " + ex.getMessage() + " " + responseCode);
         //ex.printStackTrace();
       }
     }

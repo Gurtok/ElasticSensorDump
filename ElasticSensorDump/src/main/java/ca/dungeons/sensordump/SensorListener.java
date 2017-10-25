@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package ca.dungeons.sensordump;
 
 import android.annotation.TargetApi;
@@ -162,7 +177,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
           }
         }
 
-        Log.e( logTag, "SensorRecorded!" );
+        //Log.e( logTag, "SensorRecorded!" );
         dbHelper.JsonToDatabase(joSensorData);
         serviceManager.sensorSuccess(true, gpsReading, audioReading);
         lastUpdate = System.currentTimeMillis();
@@ -173,11 +188,13 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
     }
   }
 
+
+
 // Phone Sensors
 
   /** Use this method to control if we should be recording sensor data or not. */
   void setSensorPower(boolean power) {
-    sensorLogging = true;
+    sensorLogging = power;
     if (power && !sensorsRegistered) {
       registerSensorListeners();
     }
@@ -190,7 +207,6 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
    * A control method for collection intervals.
    */
   void setSensorRefreshTime(int updatedRefresh) {
-    Log.e( logTag, "Set updateRefresh to: " + updatedRefresh );
     sensorRefreshTime = updatedRefresh;
   }
 
@@ -250,8 +266,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   /** Control method to enable/disable gps recording. */
   void setGpsPower(boolean power) {
-    Log.e( logTag, "Set gps power: " + power );
-
+    //Log.e( logTag, "Set gps power: " + power );
     if (power && sensorLogging && !gpsRegistered) {
       registerGpsSensors();
     }
@@ -300,7 +315,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   /** Set audio recording on/off. */
   void setAudioPower(boolean power) {
-    Log.e( logTag, "Set audio power: " + power );
+    //Log.e( logTag, "Set audio power: " + power );
     if (power && sensorLogging && !audioRegistered) {
       registerAudioSensors();
     }
