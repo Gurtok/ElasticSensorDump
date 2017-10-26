@@ -31,7 +31,7 @@ import ca.dungeons.sensordump.ui.camera.BarcodeGraphic;
  * to an overlay, update the graphics as the item changes, and remove the graphics when the item
  * goes away.
  */
-public class BarcodeGraphicTracker extends Tracker<Barcode> {
+class BarcodeGraphicTracker extends Tracker<Barcode> {
     private GraphicOverlay<BarcodeGraphic> mOverlay;
     private BarcodeGraphic mGraphic;
 
@@ -41,7 +41,7 @@ public class BarcodeGraphicTracker extends Tracker<Barcode> {
      * Consume the item instance detected from an Activity or Fragment level by implementing the
      * BarcodeUpdateListener interface method onBarcodeDetected.
      */
-    public interface BarcodeUpdateListener {
+    interface BarcodeUpdateListener {
         @UiThread
         void onBarcodeDetected(Barcode barcode);
     }

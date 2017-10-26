@@ -41,7 +41,7 @@ public class Fragment_Preference extends PreferenceFragment {
 
   /**
    *
-   * @param savedInstanceState
+   * @param savedInstanceState -
    */
   @Override
     public void onCreate(final Bundle savedInstanceState) {
@@ -68,31 +68,28 @@ public class Fragment_Preference extends PreferenceFragment {
     }
 
   /**
-   *
-   * @param requestCode
-   * @param resultCode
-   * @param data
+   * @param resultCode -
+   * @param data -
    */
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
 
       Log.e( TAG, "Received results from QR reader." );
-      if( requestCode == QR_REQUEST_CODE ){
 
-          if( resultCode == CommonStatusCodes.SUCCESS ){
-              Log.e( TAG, "Received SUCCESS CODE" );
-              if( data != null ){
-                  Log.e( TAG, "Intent is NOT NULL" );
-                  String hostString = data.getStringExtra("hostString" );
-                  if( ! hostString.equals("") ){
-                      sharedPreferences.edit().putString( "host", hostString ).apply();
-                      onCreate( this.getArguments() );
-                  }
-              }else{
-                  Log.e( TAG, "Supplied intent is null !!" );
+      if( resultCode == CommonStatusCodes.SUCCESS ){
+          Log.e( TAG, "Received SUCCESS CODE" );
+          if( data != null ){
+              Log.e( TAG, "Intent is NOT NULL" );
+              String hostString = data.getStringExtra("hostString" );
+              if( ! hostString.equals("") ){
+                  sharedPreferences.edit().putString( "host", hostString ).apply();
+                  onCreate( this.getArguments() );
               }
+          }else{
+              Log.e( TAG, "Supplied intent is null !!" );
           }
       }
+
   }
 
 

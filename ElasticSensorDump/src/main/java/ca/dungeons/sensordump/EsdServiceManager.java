@@ -43,21 +43,21 @@ public class EsdServiceManager extends Service {
       Timer that controls if/when we should be uploading data to the server. */
   private final ScheduledExecutorService timerPool = Executors.newScheduledThreadPool(2);
   /** Number of sensor readings this session. */
-  public int sensorReadings = 0;
+  private int sensorReadings = 0;
   /** Number of audio readings this session. */
-  public int audioReadings = 0;
+  private int audioReadings = 0;
   /** Number of gps locations recorded this session */
-  public int gpsReadings = 0;
+  private int gpsReadings = 0;
   /** Number of documents indexed to Elastic this session. */
-  public int documentsIndexed = 0;
+  private int documentsIndexed = 0;
   /** Number of data uploaded failures this session. */
-  public int uploadErrors = 0;
+  private int uploadErrors = 0;
   /** True if we are currently reading sensor data. */
-  boolean logging = false;
+  private boolean logging = false;
   /** Toggle, if we should be recording AUDIO sensor data. */
-  boolean audioLogging = false;
+  private boolean audioLogging = false;
   /** Toggle, if we should be recording GPS data. */
-  boolean gpsLogging = false;
+  private boolean gpsLogging = false;
   /** Uploads controls the data flow between the local database and Elastic server. */
   private Uploads uploads;
   /** This is the runnable we will use to check network connectivity once every 30 min. */
@@ -160,13 +160,12 @@ public class EsdServiceManager extends Service {
 
   /**
    * Used by the sensor thread to report success back here.
-   * @param sensorReading - Boolean PHONE sensor data.
+   * Will only be called when successful phone data is read.
    * @param gpsReading - Boolean GPS sensor data.
    * @param audioReading - Boolean AUDIO sensor data.
    */
-  public void sensorSuccess(boolean sensorReading, boolean gpsReading, boolean audioReading) {
-    if (sensorReading)
-      sensorReadings++;
+  public void sensorSuccess(boolean gpsReading, boolean audioReading) {
+    sensorReadings++;
     if (gpsReading)
       gpsReadings++;
     if (audioReading)

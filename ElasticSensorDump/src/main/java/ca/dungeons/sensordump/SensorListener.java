@@ -45,7 +45,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   /** Use this to identify this classes log messages. */
   private final String logTag = "SensorListener";
 
-  private EsdServiceManager serviceManager;
+  private final EsdServiceManager serviceManager;
 
   /** Main activity context. */
   private final Context passedContext;
@@ -54,7 +54,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   private final SharedPreferences sharedPrefs;
 
   /** Gives access to the local database via a helper class. */
-  private DatabaseHelper dbHelper;
+  private final DatabaseHelper dbHelper;
   /** */
   private final ExecutorService threadPool = Executors.newSingleThreadExecutor();
 
@@ -117,16 +117,6 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
     this.interrupt();
   }
 
-  @Override
-  public synchronized void start() {
-    super.start();
-  }
-
-  @Override
-  public void run() {
-    super.run();
-  }
-
   /**
    * This is the main recording loop. One reading per sensorMessageHandler per loop.
    * Update timestamp in sensorMessageHandler data structure.
@@ -179,7 +169,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
         //Log.e( logTag, "SensorRecorded!" );
         dbHelper.JsonToDatabase(joSensorData);
-        serviceManager.sensorSuccess(true, gpsReading, audioReading);
+        serviceManager.sensorSuccess(gpsReading, audioReading);
         lastUpdate = System.currentTimeMillis();
         //Log.e( logTag, "Sensor EVENT!" );
       } catch (JSONException JsonEx) {

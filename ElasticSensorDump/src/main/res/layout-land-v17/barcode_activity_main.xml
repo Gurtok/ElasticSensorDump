@@ -11,7 +11,6 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="@string/barcode_header"
         android:id="@+id/status_message"
-        android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
         android:layout_centerHorizontal="true" />
 
@@ -21,10 +20,8 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:id="@+id/barcode_value"
         android:layout_below="@+id/status_message"
-        android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_marginTop="110dp"
-        android:layout_alignRight="@+id/status_message"
         android:layout_alignEnd="@+id/status_message" />
 
     <Button
@@ -41,7 +38,6 @@
         android:text="@string/auto_focus"
         android:id="@+id/auto_focus"
         android:layout_below="@+id/barcode_value"
-        android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_marginTop="66dp"
         android:checked="false" />
@@ -52,7 +48,6 @@
         android:text="@string/use_flash"
         android:id="@+id/use_flash"
         android:layout_alignTop="@+id/auto_focus"
-        android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
         android:checked="false" />
 

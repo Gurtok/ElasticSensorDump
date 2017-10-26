@@ -68,7 +68,7 @@ class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
   }
 
   /** Get number of database entries. */
-  synchronized long databaseEntries() {
+  long databaseEntries() {
     //Log.e( "dbHelper", "database population: " + DatabaseUtils.queryNumEntries(writableDatabase, DatabaseHelper.TABLE_NAME, null) );
     return databaseCount;
   }
@@ -112,7 +112,7 @@ class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
   }
 
   /** Delete a list of rows from database. */
-  synchronized void deleteUploadedIndices() {
+  void deleteUploadedIndices() {
     for (int i = 0; i <= deleteBulkCount; i++) {
       int deleteID = deleteRowId + i;
       writableDatabase.execSQL("DELETE FROM " + TABLE_NAME + " WHERE ID = " + deleteID);
@@ -131,7 +131,7 @@ class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
    * Query the database for up to 100 rows. Concatenate using the supplied schema.
    * Return null if database is empty.
    */
-  synchronized String getBulkString(String esIndex, String esType) {
+  String getBulkString(String esIndex, String esType) {
     String bulkOutString = "";
     String separatorString = "{\"index\":{\"_index\":\"" + esIndex + "\",\"_type\":\"" + esType + "\"}}";
     String newLine = "\n";

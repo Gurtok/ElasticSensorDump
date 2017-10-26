@@ -128,7 +128,8 @@ class ElasticSearchIndexer extends Thread {
     //Log.e(logTag+" index", "Index STARTED: " + uploadString );
 
     // Boolean return to check if we successfully connected to the elastic host.
-    if (connect("POST")) {
+    if ( connect("POST") ) {
+      connectFailCount = 0;
       // POST our documents to elastic.
       try {
         DataOutputStream dataOutputStream = new DataOutputStream(httpCon.getOutputStream());
@@ -151,7 +152,7 @@ class ElasticSearchIndexer extends Thread {
   /** Open a connection with the server. */
   private boolean connect(String verb) {
     //Log.e( logTag+" connect.", "Connecting." );
-    if (connectFailCount == 0 || connectFailCount % 10 != 0) {
+    if (connectFailCount == 0 || connectFailCount % 10 == 0) {
 
       // Send authentication if required
       if (esUsername.length() > 0 && esPassword.length() > 0) {

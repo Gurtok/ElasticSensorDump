@@ -68,7 +68,6 @@ class Uploads implements Runnable {
     sharedPreferences = passedPreferences;
     this.serviceManager = serviceManager;
     esIndexer = new ElasticSearchIndexer( this );
-
   }
 
   /** Main class entry. The data we need has already been updated. So just go nuts. */
@@ -76,6 +75,7 @@ class Uploads implements Runnable {
   public void run() {
     Log.e(logTag, "Started upload thread.");
     working = true;
+    globalUploadTimer = System.currentTimeMillis();
     startUploading();
     working = false;
     Log.e(logTag, "Stopped upload thread.");
@@ -99,6 +99,7 @@ class Uploads implements Runnable {
 
     int timeoutCount = 0;
     DatabaseHelper dbHelper = new DatabaseHelper(serviceContext);
+
         /* If we cannot establish a connection with the elastic server. */
     if (!checkForElasticHost()) {
       // This thread is not working.
@@ -110,10 +111,12 @@ class Uploads implements Runnable {
 
         /* Loop to keep uploading. */
     while (!stopUploadThread) {
-        /* A limit of 5 outs per second */
-      if (System.currentTimeMillis() > globalUploadTimer + 200 ) {
+      // If we have gone more than 5 seconds without an update, stop the thread.
+      if( globalUploadTimer + 5000 < System.currentTimeMillis() ){
+        stopUploadThread = true;
+        return;
+      }else if (System.currentTimeMillis() > globalUploadTimer + 200 ) {
         String nextString = dbHelper.getBulkString(esIndex, esType);
-
         if( nextString != null ){
           updateIndexerUrl();
           // If setNextString has data.
@@ -136,16 +139,19 @@ class Uploads implements Runnable {
           } else {
             timeoutCount++;
             serviceManager.uploadSuccess( false, 0 );
+            if (timeoutCount > 9) {
+              Log.i(logTag, "Failed to index 10 times, shutting down.");
+              stopUploading();
+            }
           }
         }else{
           stopUploadThread = true;
         }
-        if (timeoutCount > 9) {
-          Log.i(logTag, "Failed to index 10 times, shutting down.");
-          stopUploading();
-        }
+
       }
+
     }
+
     dbHelper.close();
   }
 

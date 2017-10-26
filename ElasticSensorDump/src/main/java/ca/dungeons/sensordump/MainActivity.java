@@ -69,6 +69,10 @@ public class MainActivity extends Activity {
   private int sensorReadings, documentsIndexed, gpsReadings, uploadErrors, audioReadings = 0;
   /** The current database population. Probably does not need to be a long, research how sql deals with IDs. */
   private long databasePopulation = 0L;
+  private TextView sensorTV, documentsTV, gpsTV, errorsTV, audioTV, databaseTV;
+
+
+
   /** The runnable used to periodically update the UI with data counts. */
   private Runnable updateRunnable = new Runnable() {
     @Override
@@ -93,6 +97,13 @@ public class MainActivity extends Activity {
     sharedPrefs = this.getPreferences(MODE_PRIVATE);
     buildButtonLogic();
     Log.e(logTag, "Started Main Activity!");
+
+    sensorTV = (TextView) findViewById(R.id.sensor_tv);
+    documentsTV = (TextView) findViewById(R.id.documents_tv);
+    gpsTV = (TextView) findViewById(R.id.gps_TV);
+    errorsTV = (TextView) findViewById(R.id.errors_TV);
+    audioTV = (TextView) findViewById(R.id.audioCount);
+    databaseTV = (TextView) findViewById(R.id.databaseCount);
   }
 
   /** Method to start the service manager if we have not already. */
@@ -117,7 +128,7 @@ public class MainActivity extends Activity {
   };
 
   /** Call service manager to receive a bundle of updated data counts. */
-  void getScreenUpdates(){
+  private void getScreenUpdates(){
     if( isBound ){
       Bundle dataBundle = serviceManager.updateUiData();
       sensorReadings = dataBundle.getInt("sensorReadings" );
@@ -142,15 +153,8 @@ public class MainActivity extends Activity {
   }
 
   /** Call for updates, then update the display. */
-  void updateScreen() {
+  private void updateScreen() {
     getScreenUpdates();
-    TextView sensorTV = (TextView) findViewById(R.id.sensor_tv);
-    TextView documentsTV = (TextView) findViewById(R.id.documents_tv);
-    TextView gpsTV = (TextView) findViewById(R.id.gps_TV);
-    TextView errorsTV = (TextView) findViewById(R.id.errors_TV);
-    TextView audioTV = (TextView) findViewById(R.id.audioCount);
-    TextView databaseTV = (TextView) findViewById(R.id.databaseCount);
-
     sensorTV.setText(String.valueOf(sensorReadings));
     documentsTV.setText(String.valueOf(documentsIndexed));
     gpsTV.setText(String.valueOf(gpsReadings));
@@ -236,7 +240,7 @@ public class MainActivity extends Activity {
       public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (progress * 10 < MIN_SENSOR_REFRESH) {
           seekBar.setProgress(5);
-          Toast.makeText(getApplicationContext(), "Minimum sensor refresh is 50 ms", Toast.LENGTH_SHORT).show();
+          Toast.makeText(getApplicationContext(), "Minimum sensor refresh is 100 ms", Toast.LENGTH_SHORT).show();
         } else {
           sensorRefreshTime = progress * 10;
         }
@@ -254,6 +258,8 @@ public class MainActivity extends Activity {
       public void onStopTrackingTouch(SeekBar seekBar) {
       } //intentionally blank
     });
+
+
 
   }
 
