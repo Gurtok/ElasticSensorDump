@@ -22,16 +22,14 @@ import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
-
 import org.json.JSONObject;
-
 
 /**
  * A class to buffer generated data to a dataBase for later upload.
  * @author Gurtok.
  * @version First version of ESD dataBase helper.
  */
-class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
+class DatabaseHelper extends SQLiteOpenHelper{
 
   /** Main database name */
   private static final String DATABASE_NAME = "dbStorage";
@@ -61,10 +59,6 @@ class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
     String query = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (ID INTEGER PRIMARY KEY, JSON TEXT);";
     writableDatabase.execSQL(query);
     databaseCount = DatabaseUtils.queryNumEntries(writableDatabase, DatabaseHelper.TABLE_NAME, null);
-  }
-
-  @Override
-  public void run() {
   }
 
   /** Get number of database entries. */
@@ -117,13 +111,13 @@ class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
       int deleteID = deleteRowId + i;
       writableDatabase.execSQL("DELETE FROM " + TABLE_NAME + " WHERE ID = " + deleteID);
     }
-    databaseCount = databaseCount - deleteBulkCount;
+    databaseCount = DatabaseUtils.queryNumEntries(writableDatabase, DatabaseHelper.TABLE_NAME, null);
   }
 
   /**
    * @return - The current database population.
    */
-  int getBulkCounts() {
+  int getDeleteCount() {
     return deleteBulkCount;
   }
 
@@ -135,19 +129,15 @@ class DatabaseHelper extends SQLiteOpenHelper implements Runnable {
     String bulkOutString = "";
     String separatorString = "{\"index\":{\"_index\":\"" + esIndex + "\",\"_type\":\"" + esType + "\"}}";
     String newLine = "\n";
-
-    databaseCount = DatabaseUtils.queryNumEntries(writableDatabase, DatabaseHelper.TABLE_NAME, null);
-    Cursor outCursor = writableDatabase.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_NAME + " ORDER BY ID ASC LIMIT 1000", new String[]{});
+    Cursor outCursor = writableDatabase.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_NAME + " ORDER BY ID ASC LIMIT 500", new String[]{});
     deleteBulkCount = outCursor.getCount();
-
+    outCursor.moveToFirst();
+    deleteRowId = outCursor.getInt(0);
     if (deleteBulkCount != 0) {
-      outCursor.moveToFirst();
-      deleteRowId = outCursor.getInt(0);
       do {
         bulkOutString = bulkOutString.concat(separatorString + newLine + outCursor.getString(1) + newLine);
         outCursor.moveToNext();
       } while (!outCursor.isAfterLast());
-
       outCursor.close();
       return bulkOutString;
     }

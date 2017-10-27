@@ -200,7 +200,6 @@ public class MainActivity extends Activity {
 
 
     final CheckBox gpsCheckBox = (CheckBox) findViewById(R.id.gpsCheckBox);
-
     gpsCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
       @Override
       public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -220,7 +219,6 @@ public class MainActivity extends Activity {
     audioCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
       @Override
       public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-
         // If audio button is turned ON.
         if (!audioPermission() && isChecked) {
           audioCheckBox.toggle();
@@ -234,13 +232,13 @@ public class MainActivity extends Activity {
 
     final SeekBar seekBar = (SeekBar) findViewById(R.id.seekBar);
     final TextView tvSeekBarText = (TextView) findViewById(R.id.TickText);
-    tvSeekBarText.setText(getString(R.string.Collection_Interval) + " " + seekBar.getProgress() * 10 + getString(R.string.milliseconds));
+    tvSeekBarText.setText(getString(R.string.Collection_Interval) + " 250" + getString(R.string.milliseconds));
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       @Override
       public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-        if (progress * 10 < MIN_SENSOR_REFRESH) {
-          seekBar.setProgress(5);
+        if ( progress * 10  < MIN_SENSOR_REFRESH ) {
           Toast.makeText(getApplicationContext(), "Minimum sensor refresh is 100 ms", Toast.LENGTH_SHORT).show();
+          seekBar.setProgress(10);
         } else {
           sensorRefreshTime = progress * 10;
         }
@@ -249,18 +247,11 @@ public class MainActivity extends Activity {
         }
         tvSeekBarText.setText(getString(R.string.Collection_Interval) + " " + sensorRefreshTime + getString(R.string.milliseconds));
       }
-
       @Override
-      public void onStartTrackingTouch(SeekBar seekBar) {
-      } //intentionally blank
-
+      public void onStartTrackingTouch(SeekBar seekBar) {} //intentionally blank
       @Override
-      public void onStopTrackingTouch(SeekBar seekBar) {
-      } //intentionally blank
+      public void onStopTrackingTouch(SeekBar seekBar) {} //intentionally blank
     });
-
-
-
   }
 
   /**
@@ -332,7 +323,7 @@ public class MainActivity extends Activity {
     super.onResume();
     startServiceManager();
     databaseHelper = new DatabaseHelper(this);
-    updateTimer.scheduleAtFixedRate(updateRunnable, 1, 1, TimeUnit.SECONDS );
+    updateTimer.scheduleAtFixedRate(updateRunnable, 500, 500, TimeUnit.MILLISECONDS );
   }
 
   /** If the user exits the application. */

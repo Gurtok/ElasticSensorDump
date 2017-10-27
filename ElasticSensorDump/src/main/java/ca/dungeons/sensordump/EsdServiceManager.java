@@ -38,9 +38,11 @@ public class EsdServiceManager extends Service {
   /** New instance of the sensor thread. */
   private SensorListener sensorListener;
   /** This thread pool is the working pool. Use this to execute the sensor runnable and Uploads. */
-  private final ExecutorService workingThreadPool = Executors.newFixedThreadPool(4);
-  /** This thread pool handles the timer in which we control this service.
-      Timer that controls if/when we should be uploading data to the server. */
+  private final ExecutorService workingThreadPool = Executors.newFixedThreadPool(2);
+  /**
+   * This thread pool handles the timer in which we control this service.
+   * Timer that controls if/when we should be uploading data to the server.
+   */
   private final ScheduledExecutorService timerPool = Executors.newScheduledThreadPool(2);
   /** Number of sensor readings this session. */
   private int sensorReadings = 0;
@@ -64,13 +66,13 @@ public class EsdServiceManager extends Service {
   private final Runnable uploadRunnable = new Runnable() {
     @Override
     public void run() {
-        if ( !uploads.isWorking() ) {
-          workingThreadPool.submit(uploads);
-        } else if ( uploads.isWorking() ) {
-          Log.e(logTag, "Uploading already in progress.");
-        } else {
-          Log.e(logTag, "Failed to submit uploads runnable to thread pool!");
-        }
+      if (!uploads.isWorking()) {
+        workingThreadPool.submit(uploads);
+      } else if (uploads.isWorking()) {
+        Log.e(logTag, "Uploading already in progress.");
+      } else {
+        Log.e(logTag, "Failed to submit uploads runnable to thread pool!");
+      }
     }
   };
 
@@ -103,7 +105,7 @@ public class EsdServiceManager extends Service {
     SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this.getBaseContext());
     dbHelper = new DatabaseHelper(this);
     sensorListener = new SensorListener(this, sharedPrefs, dbHelper, this);
-    uploads = new Uploads(this, sharedPrefs, this);
+    uploads = new Uploads(sharedPrefs, this, dbHelper);
   }
 
   /** Return a reference to this instance of the service. */
@@ -135,7 +137,7 @@ public class EsdServiceManager extends Service {
       workingThreadPool.submit(sensorListener);
         /* Create an instance of Uploads, and submit to the thread pool to begin execution. */
         /* Schedule periodic checks for internet connectivity. */
-      timerPool.scheduleAtFixedRate(uploadRunnable, 5, 30, TimeUnit.SECONDS);
+      timerPool.scheduleAtFixedRate(uploadRunnable, 5, 60, TimeUnit.SECONDS);
         /* Schedule periodic checks for service shutdown due to inactivity. */
       timerPool.scheduleAtFixedRate(serviceTimeoutRunnable, 60, 60, TimeUnit.MINUTES);
         /* Send a message to the main thread to indicate the manager service has been initialized. */
@@ -154,14 +156,14 @@ public class EsdServiceManager extends Service {
     outBundle.putInt("audioReadings", audioReadings);
     outBundle.putInt("documentsIndexed", documentsIndexed);
     outBundle.putInt("uploadErrors", uploadErrors);
-    outBundle.putLong("databasePopulation", dbHelper.databaseEntries() );
+    outBundle.putLong("databasePopulation", dbHelper.databaseEntries());
     return outBundle;
   }
 
   /**
    * Used by the sensor thread to report success back here.
    * Will only be called when successful phone data is read.
-   * @param gpsReading - Boolean GPS sensor data.
+   * @param gpsReading   - Boolean GPS sensor data.
    * @param audioReading - Boolean AUDIO sensor data.
    */
   public void sensorSuccess(boolean gpsReading, boolean audioReading) {
@@ -175,14 +177,13 @@ public class EsdServiceManager extends Service {
   /**
    * Used by the upload thread to report success back here.
    * @param result - Boolean true if successful.
-   * @param count - Integer, how many records were indexed.
+   * @param count  - Integer, how many records were indexed.
    */
   public void uploadSuccess(boolean result, int count) {
-    if (result) {
+    if (result)
       documentsIndexed = documentsIndexed + count;
-    } else {
+    else
       uploadErrors++;
-    }
   }
 
   /**

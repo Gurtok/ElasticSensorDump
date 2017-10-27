@@ -52,7 +52,7 @@
             android:layout_height="40dp"
             android:layout_gravity="center"
             android:max="100"
-            android:progress="25" />
+            android:progress="25"/>
 
     </LinearLayout>
 

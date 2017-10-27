@@ -66,10 +66,8 @@ class AudioRunnable implements Runnable {
   @SuppressWarnings("ConstantConditions")
   @Override
   public void run() {
-
     // ?????
     audioBuffer = new short[bufferSize / 2];
-
     // New instance of Android audio recording api.
     AudioRecord audioRecord = new AudioRecord(
             MediaRecorder.AudioSource.DEFAULT,
@@ -83,41 +81,29 @@ class AudioRunnable implements Runnable {
       Log.e("Audio Error", "AudioRecord has not been initialized properly.");
       return;
     }
-
     while (!stopThread) {
-
       audioRecord.read(audioBuffer, 0, audioBuffer.length);
-
       float lowest = 0;
       float highest = 0;
       int zeroes = 0;
       int last_value = 0;
-
-
       if (audioBuffer != null) {
         // Exploring the buffer. Record the highest and lowest readings
         for (short anAudioBuffer : audioBuffer) {
-
           lowest = anAudioBuffer < lowest ? anAudioBuffer : lowest;
-
           highest = anAudioBuffer > highest ? anAudioBuffer : highest;
-
           // Down and coming up
           if (anAudioBuffer > 0 && last_value < 0) {
             zeroes++;
           }
-
           // Up and down
           if (anAudioBuffer < 0 && last_value > 0) {
             zeroes++;
           }
-
           last_value = anAudioBuffer;
-
           // Calculate highest and lowest peak difference as a % of the max possible
           // value
           amplitude = (highest - lowest) / 65536 * 100;
-
           // Take the count of the peaks in the time that we had based on the sample
           // rate to calculate frequency
           if (audioBuffer != null) {
@@ -126,15 +112,12 @@ class AudioRunnable implements Runnable {
 
             hasData = true;
           }
-
         }
       }
     }
-
     audioRecord.stop();
     audioRecord.release();
     Log.i(logTag, "Audio recording stopping.");
-
   }
 
   /** Called on the sensor thread, delivers data to the sensor message handler. */
