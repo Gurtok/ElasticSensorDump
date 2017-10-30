@@ -21,7 +21,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -53,8 +52,6 @@ public class MainActivity extends Activity {
   private final String logTag = "MainActivity";
   /** Do NOT record more than once every 50 milliseconds. Default value is 250ms. */
   private final int MIN_SENSOR_REFRESH = 100;
-  /** Global SharedPreferences object. */
-  private SharedPreferences sharedPrefs;
   /** Persistent access to the apps database to avoid creating multiple db objects. */
   private DatabaseHelper databaseHelper;
   /** The backend service that runs data collection and uploading. */
@@ -70,8 +67,6 @@ public class MainActivity extends Activity {
   /** The current database population. Probably does not need to be a long, research how sql deals with IDs. */
   private long databasePopulation = 0L;
   private TextView sensorTV, documentsTV, gpsTV, errorsTV, audioTV, databaseTV;
-
-
 
   /** The runnable used to periodically update the UI with data counts. */
   private Runnable updateRunnable = new Runnable() {
@@ -94,7 +89,6 @@ public class MainActivity extends Activity {
   protected void onCreate(final Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    sharedPrefs = this.getPreferences(MODE_PRIVATE);
     buildButtonLogic();
     Log.e(logTag, "Started Main Activity!");
 
@@ -138,18 +132,6 @@ public class MainActivity extends Activity {
       audioReadings = dataBundle.getInt("audioReadings" );
       databasePopulation = dataBundle.getLong("databasePopulation" );
     }
-  }
-
-  /**
-   * Update preferences with new permissions.
-   * @param asked      Preferences key.
-   * @param permission True if we have access.
-   */
-  private void BooleanToPrefs(String asked, boolean permission) {
-    sharedPrefs = getPreferences(MODE_PRIVATE);
-    SharedPreferences.Editor sharedPref_Editor = sharedPrefs.edit();
-    sharedPref_Editor.putBoolean(asked, permission);
-    sharedPref_Editor.apply();
   }
 
   /** Call for updates, then update the display. */
@@ -207,7 +189,6 @@ public class MainActivity extends Activity {
         if (!gpsPermission() && isChecked) {
           gpsCheckBox.toggle();
           Toast.makeText(getApplicationContext(), "GPS access denied.", Toast.LENGTH_SHORT).show();
-          BooleanToPrefs("gps_asked", false);
         } else {
           serviceManager.setGpsPower( isChecked );
         }
@@ -223,7 +204,6 @@ public class MainActivity extends Activity {
         if (!audioPermission() && isChecked) {
           audioCheckBox.toggle();
           Toast.makeText(getApplicationContext(), "Audio access denied.", Toast.LENGTH_SHORT).show();
-          BooleanToPrefs("audio_Asked", false);
         } else {
           serviceManager.setAudioPower( isChecked );
         }
@@ -232,7 +212,8 @@ public class MainActivity extends Activity {
 
     final SeekBar seekBar = (SeekBar) findViewById(R.id.seekBar);
     final TextView tvSeekBarText = (TextView) findViewById(R.id.TickText);
-    tvSeekBarText.setText(getString(R.string.Collection_Interval) + " 250" + getString(R.string.milliseconds));
+
+    tvSeekBarText.setText( String.format("%s %s %s",getString(R.string.Collection_Interval), "250", getString(R.string.milliseconds) ) );
     seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
       @Override
       public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -245,7 +226,7 @@ public class MainActivity extends Activity {
         if( serviceManager != null ){
           serviceManager.setSensorRefreshTime( sensorRefreshTime );
         }
-        tvSeekBarText.setText(getString(R.string.Collection_Interval) + " " + sensorRefreshTime + getString(R.string.milliseconds));
+        tvSeekBarText.setText( String.format("%s %s %s",getString(R.string.Collection_Interval), sensorRefreshTime, getString(R.string.milliseconds) ) );
       }
       @Override
       public void onStartTrackingTouch(SeekBar seekBar) {} //intentionally blank
@@ -261,29 +242,13 @@ public class MainActivity extends Activity {
    */
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   private boolean gpsPermission() {
-
+    ActivityCompat.requestPermissions(this, new String[]{
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION}, MODE_PRIVATE);
     boolean gpsPermissionCoarse = (ContextCompat.checkSelfPermission(this, Manifest.permission.
             ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
-
     boolean gpsPermissionFine = (ContextCompat.checkSelfPermission(this, android.Manifest.permission.
             ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
-
-    if (!gpsPermissionFine && !gpsPermissionCoarse) {
-
-      ActivityCompat.requestPermissions(this, new String[]{
-              Manifest.permission.ACCESS_COARSE_LOCATION,
-              Manifest.permission.ACCESS_FINE_LOCATION
-      }, 1);
-
-      gpsPermissionCoarse = (ContextCompat.checkSelfPermission(this, Manifest.permission.
-              ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
-
-      gpsPermissionFine = (ContextCompat.checkSelfPermission(this, android.Manifest.permission.
-              ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
-
-    }
-    BooleanToPrefs("gps_permission_FINE", gpsPermissionFine);
-    BooleanToPrefs("gps_permission_COURSE", gpsPermissionCoarse);
     return (gpsPermissionFine || gpsPermissionCoarse);
   }
 
@@ -294,18 +259,11 @@ public class MainActivity extends Activity {
    */
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   private boolean audioPermission() {
-    boolean audioPermission = sharedPrefs.getBoolean("audio_permission", false);
-    if (!audioPermission) {
-      String[] permissions = {Manifest.permission.RECORD_AUDIO};
-      ActivityCompat.requestPermissions(this, permissions, 1);
-
-      audioPermission = (ContextCompat.checkSelfPermission(this,
-              Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED);
-      BooleanToPrefs("audio_Permission", audioPermission);
-    }
-    return audioPermission;
+    ActivityCompat.requestPermissions(this, new String[]{
+            Manifest.permission.RECORD_AUDIO}, 1);
+    return (ContextCompat.checkSelfPermission(this,
+            Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED);
   }
-
 
   /** If our activity is paused, we need to indicate to the service manager via a static variable. */
   @Override
@@ -335,4 +293,6 @@ public class MainActivity extends Activity {
     databaseHelper.close();
     super.onDestroy();
   }
+
+
 }

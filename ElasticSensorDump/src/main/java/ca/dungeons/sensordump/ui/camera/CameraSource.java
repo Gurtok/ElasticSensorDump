@@ -72,9 +72,9 @@ import java.util.Map;
 @SuppressWarnings("deprecation")
 public class CameraSource {
   @SuppressLint("InlinedApi")
-  public static final int CAMERA_FACING_BACK = CameraInfo.CAMERA_FACING_BACK;
+  static final int CAMERA_FACING_BACK = CameraInfo.CAMERA_FACING_BACK;
   @SuppressLint("InlinedApi")
-  private static final int CAMERA_FACING_FRONT = CameraInfo.CAMERA_FACING_FRONT;
+  static final int CAMERA_FACING_FRONT = CameraInfo.CAMERA_FACING_FRONT;
 
   private static final String TAG = "OpenCameraSource";
 

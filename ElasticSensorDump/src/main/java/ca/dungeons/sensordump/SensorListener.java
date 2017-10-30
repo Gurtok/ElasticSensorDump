@@ -15,22 +15,20 @@
  */
 package ca.dungeons.sensordump;
 
-import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 import android.location.LocationManager;
 import android.os.BatteryManager;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -44,30 +42,22 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   /** Use this to identify this classes log messages. */
   private final String logTag = "SensorListener";
-
+  /** The controlling service manager. */
   private final EsdServiceManager serviceManager;
-
   /** Main activity context. */
   private final Context passedContext;
-
-  /** Applications' shared preferences. */
-  private final SharedPreferences sharedPrefs;
-
   /** Gives access to the local database via a helper class. */
   private final DatabaseHelper dbHelper;
-  /** */
-  private final ExecutorService threadPool = Executors.newSingleThreadExecutor();
-
+  /** The audio runnable is executed on this thread. */
+  private final ExecutorService audioThread = Executors.newSingleThreadExecutor();
 // Date / Time variables.
   /** A static reference to the custom date format. */
   @SuppressWarnings("SpellCheckingInspection")
   private final SimpleDateFormat logDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ", Locale.US);
-
   /** Timers, the schema is defined else where. */
   private long startTime;
   /** Used to get access to GPS. */
   private final LocationManager locationManager;
-
 // Sensor variables.
   private long lastUpdate;
   /** If we are currently logging PHONE sensor data. */
@@ -84,27 +74,22 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   private boolean sensorsRegistered = false;
   /** Listener for battery updates. */
   private BroadcastReceiver batteryReceiver;
-
 // GPS variables.
   /** Battery level in percentages. */
   private double batteryLevel = 0;
   /** Helper class to organize gps data. */
   private GPSLogger gpsLogger = new GPSLogger();
-
   /** Control for telling if we have already registered the gps listeners. */
   private boolean gpsRegistered;
-
 // AUDIO variables.
   /** Helper class for obtaining audio data. */
   private AudioRunnable audioRunnable;
-
   /** Control variable to make sure we only create one audio logger. */
   private boolean audioRegistered;
 
 
   /** Default Constructor. */
-  SensorListener(Context context, SharedPreferences sharedPreferences, DatabaseHelper dbHelper, EsdServiceManager serviceManger) {
-    sharedPrefs = sharedPreferences;
+  SensorListener(Context context, DatabaseHelper dbHelper, EsdServiceManager serviceManger ) {
     passedContext = context;
     this.serviceManager = serviceManger;
     this.dbHelper = dbHelper;
@@ -142,23 +127,17 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
         joSensorData.put("@timestamp", logDateFormat.format(new Date(System.currentTimeMillis())));
         joSensorData.put("start_time", logDateFormat.format(new Date(startTime)));
         joSensorData.put("log_duration_seconds", (System.currentTimeMillis() - startTime) / 1000);
-
-        //Log.e(logTag, "gpsRegistered: " + gpsRegistered + " gps has data? " + gpsLogger.gpsHasData );
         if (gpsRegistered && gpsLogger.gpsHasData) {
           joSensorData = gpsLogger.getGpsData(joSensorData);
           gpsReading = true;
         }
-
-        //Log.e(logTag, "audioRegistered: " + audioRegistered + " gps has data? " + gpsLogger.gpsHasData );
         if (audioRegistered && audioRunnable.hasData) {
           joSensorData = audioRunnable.getAudioData(joSensorData);
           audioReading = true;
         }
-
         if (batteryLevel > 0) {
           joSensorData.put("battery_percentage", batteryLevel);
         }
-
         for (Float cursor : event.values) {
           if (!cursor.isNaN() && cursor < Long.MAX_VALUE && cursor > Long.MIN_VALUE) {
             sensorHierarchyName = event.sensor.getStringType().split("\\.");
@@ -166,12 +145,9 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
             joSensorData.put(sensorName, cursor);
           }
         }
-
-        //Log.e( logTag, "SensorRecorded!" );
         dbHelper.JsonToDatabase(joSensorData);
         serviceManager.sensorSuccess(gpsReading, audioReading);
         lastUpdate = System.currentTimeMillis();
-        //Log.e( logTag, "Sensor EVENT!" );
       } catch (JSONException JsonEx) {
         Log.e(logTag, JsonEx.getMessage() + " || " + JsonEx.getCause());
       }
@@ -203,7 +179,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   /** Method to register listeners upon logging. */
   private void registerSensorListeners() {
     startTime = lastUpdate = System.currentTimeMillis();
-    parseSensorArray();
+    parseSensors();
     // Register each sensorMessageHandler to this activity.
     for (int cursorInt : usableSensorList) {
       mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(cursorInt),
@@ -226,20 +202,22 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   }
 
   /** Generate a list of on-board phone sensors. */
-  @TargetApi(21)
-  private void parseSensorArray() {
-
-    mSensorManager = (SensorManager) passedContext.getSystemService(Context.SENSOR_SERVICE);
-    List<Sensor> deviceSensors = mSensorManager.getSensorList(Sensor.TYPE_ALL);
-    usableSensorList = new ArrayList<>(deviceSensors.size());
-
-    for (Sensor i : deviceSensors) {
-      // Use this to filter out trigger(One-shot) sensors, which are dealt with differently.
-      if (i.getReportingMode() != Sensor.REPORTING_MODE_ONE_SHOT) {
-        usableSensorList.add(i.getType());
+  private void parseSensors() {
+    try{
+      mSensorManager = (SensorManager) passedContext.getSystemService(Context.SENSOR_SERVICE);
+      if(mSensorManager != null ){
+        List<Sensor> deviceSensors = mSensorManager.getSensorList(Sensor.TYPE_ALL);
+        usableSensorList = new ArrayList<>(deviceSensors.size());
+        for (Sensor i : deviceSensors) {
+          // Use this to filter out trigger(One-shot) sensors, which are dealt with differently.
+          if (i.getReportingMode() != Sensor.REPORTING_MODE_ONE_SHOT) {
+            usableSensorList.add(i.getType());
+          }
+        }
       }
+    }catch( NullPointerException nullPtrEx ){
+      Log.e(logTag, "Sensor list is returned null." );
     }
-
     batteryReceiver = new BroadcastReceiver() {
       @Override
       public void onReceive(Context context, Intent intent) {
@@ -260,7 +238,6 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
     if (power && sensorLogging && !gpsRegistered) {
       registerGpsSensors();
     }
-
     if (!power && gpsRegistered) {
       unRegisterGpsSensors();
     }
@@ -269,12 +246,14 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
 
   /** Register gps sensors to enable recording. */
   private void registerGpsSensors() {
-    if( !gpsRegistered ){
-      boolean gpsPermissionFine = sharedPrefs.getBoolean("gps_permission_FINE", false);
-      boolean gpsPermissionCoarse = sharedPrefs.getBoolean("gps_permission_COARSE", false);
 
+    if( !gpsRegistered ){
+      boolean gpsPermissionFine = (ContextCompat.checkSelfPermission(passedContext.getApplicationContext(), android.Manifest.permission.
+              ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
+      boolean gpsPermissionCoarse = (ContextCompat.checkSelfPermission(passedContext.getApplicationContext(), android.Manifest.permission.
+              ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
       try {
-        if (gpsPermissionFine || gpsPermissionCoarse) {
+        if ( gpsPermissionFine || gpsPermissionCoarse ) {
           locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, sensorRefreshTime - 10, 0, gpsLogger);
           locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, sensorRefreshTime - 10, 0, gpsLogger);
           Log.i(logTag, "GPS listeners registered.");
@@ -290,6 +269,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
         runTimeEx.printStackTrace();
       }
     }
+
   }
 
   /** Unregister gps sensors. */
@@ -300,6 +280,8 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
       Log.i(logTag, "GPS unregistered.");
     }
   }
+
+
 
 //AUDIO
 
@@ -318,7 +300,7 @@ class SensorListener extends Thread implements android.hardware.SensorEventListe
   private void registerAudioSensors() {
     if( !audioRegistered ){
       audioRunnable = new AudioRunnable();
-      threadPool.submit(audioRunnable);
+      audioThread.submit(audioRunnable);
       audioRegistered = true;
       Log.i(logTag, "Registered audio sensors.");
     }

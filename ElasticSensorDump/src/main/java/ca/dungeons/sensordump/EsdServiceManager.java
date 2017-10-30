@@ -102,9 +102,9 @@ public class EsdServiceManager extends Service {
    */
   @Override
   public void onCreate() {
-    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this.getBaseContext());
+    SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
     dbHelper = new DatabaseHelper(this);
-    sensorListener = new SensorListener(this, sharedPrefs, dbHelper, this);
+    sensorListener = new SensorListener(getBaseContext(), dbHelper, this);
     uploads = new Uploads(sharedPrefs, this, dbHelper);
   }
 
