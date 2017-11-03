@@ -129,7 +129,7 @@ class DatabaseHelper extends SQLiteOpenHelper{
     String bulkOutString = "";
     String separatorString = "{\"index\":{\"_index\":\"" + esIndex + "\",\"_type\":\"" + esType + "\"}}";
     String newLine = "\n";
-    Cursor outCursor = writableDatabase.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_NAME + " ORDER BY ID ASC LIMIT 500", new String[]{});
+    Cursor outCursor = writableDatabase.rawQuery("SELECT * FROM " + DatabaseHelper.TABLE_NAME + " ORDER BY ID ASC LIMIT 1000", new String[]{});
     deleteBulkCount = outCursor.getCount();
     outCursor.moveToFirst();
     deleteRowId = outCursor.getInt(0);

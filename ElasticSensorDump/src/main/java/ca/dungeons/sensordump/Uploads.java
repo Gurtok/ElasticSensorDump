@@ -178,15 +178,15 @@ class Uploads implements Runnable {
     HttpsURLConnection httpsConnection;
     URL esUrl;
     String esHost = sharedPreferences.getString("host", "192.168.1.120");
-    String esPort = sharedPreferences.getString("port", "9200");
     boolean esSSL = sharedPreferences.getBoolean("ssl", false);
     // Secured Connection
     if (esSSL) {
       final String esUsername = sharedPreferences.getString("user", "");
       final String esPassword = sharedPreferences.getString("pass", "");
       try {
-        esUrl = new URL(String.format("%s:%s/", esHost, esPort));
+        esUrl = new URL(String.format("%s", esHost));
         httpsConnection = (HttpsURLConnection) esUrl.openConnection();
+        Log.e(logTag+"chk",String.format("%s", esHost) );
         // Send authentication if required
         if (esUsername.length() > 0 && esPassword.length() > 0) {
           Authenticator.setDefault(new Authenticator() {
@@ -202,15 +202,17 @@ class Uploads implements Runnable {
         if (responseCode >= 200 && responseCode <= 299) {
           responseCodeSuccess = true;
           httpsConnection.disconnect();
+        }else{
+          Log.e(logTag + " chk", "Failure to open connection cause. " + responseCode + " " + httpsConnection.getResponseMessage());
         }
       } catch (IOException | NullPointerException ex) {
         Log.e(logTag + " chkHost", "Failure to open connection cause. " + ex.getMessage() + " " + responseCode);
-        //ex.printStackTrace();
+        ex.printStackTrace();
       }
     }else{ // Else NON-secured connection.
       try {
         //Log.e("Uploads-CheckHost", esHostUrlString); // DIAGNOSTICS
-        esUrl = new URL(String.format("%s:%s/", esHost, esPort));
+        esUrl = new URL(String.format("%s", esHost));
         httpConnection = (HttpURLConnection) esUrl.openConnection();
         httpConnection.setConnectTimeout(2000);
         httpConnection.setReadTimeout(2000);
